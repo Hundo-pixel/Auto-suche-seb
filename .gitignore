@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+# Laufzeitdaten (liegen im Branch "data" bzw. lokal)
+scraper/var/
+scraper/models_cache/
+.state/
+_site/
+# generierte App-Daten – nur die PLZ-Tabelle wird versioniert
+web/data/*
+!web/data/plz.json

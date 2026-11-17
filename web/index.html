@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Autosuche</title>
+  <meta name="description" content="Gebrauchtwagen aus mehreren Portalen – gesammelt und nach Preis-Leistung bewertet.">
+  <meta name="theme-color" content="#f2f2f7" id="theme-color">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Autosuche">
+  <meta name="color-scheme" content="light dark">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script>
+    // Theme vor dem ersten Rendern setzen (verhindert Aufblitzen)
+    (function () {
+      var t = localStorage.getItem("as.theme") || "auto";
+      if (t !== "auto") document.documentElement.dataset.theme = t;
+    })();
+  </script>
+</head>
+<body>
+  <div id="app">
+    <!-- ====================== Suche ====================== -->
+    <section class="view active" id="view-search" data-tab="search">
+      <header class="nav nav-large">
+        <div class="nav-row">
+          <h1 class="large-title">Autos</h1>
+          <button class="icon-btn" id="btn-sort" aria-label="Sortierung">
+            <svg viewBox="0 0 24 24"><path d="M7 4v14m0 0-3-3m3 3 3-3M17 20V6m0 0-3 3m3-3 3 3"/></svg>
+          </button>
+        </div>
+        <div class="search-field">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="Marke, Modell, Ausstattung …" autocomplete="off" enterkeyhint="search">
+        </div>
+        <div class="chips" id="chips">
+          <button class="chip" id="chip-filter">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            <span>Filter</span><span class="chip-badge" id="filter-count" hidden></span>
+          </button>
+          <button class="chip" id="chip-location">
+            <svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+            <span id="chip-location-label">Standort</span>
+          </button>
+          <button class="chip" id="chip-sort"><span id="chip-sort-label">Bester Score</span></button>
+        </div>
+      </header>
+      <div class="status-line" id="status-line"></div>
+      <main class="list" id="list" aria-live="polite"></main>
+      <div class="empty" id="empty" hidden>
+        <div class="empty-icon">🔍</div>
+        <h2>Keine Treffer</h2>
+        <p>Passe Filter oder Umkreis an.</p>
+        <button class="btn-tinted" id="btn-reset-filters">Filter zurücksetzen</button>
+      </div>
+      <div id="sentinel"></div>
+    </section>
+
+    <!-- ====================== Karte ====================== -->
+    <section class="view" id="view-map" data-tab="map">
+      <div id="map"></div>
+      <div class="map-top">
+        <button class="chip chip-float" id="map-filter"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span>Filter</span></button>
+        <div class="chip chip-float" id="map-count">0 Inserate</div>
+        <button class="chip chip-float" id="map-location"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span id="map-location-label">Standort</span></button>
+      </div>
+      <div class="map-preview" id="map-preview" hidden></div>
+    </section>
+
+    <!-- ====================== Favoriten ====================== -->
+    <section class="view" id="view-favs" data-tab="favs">
+      <header class="nav nav-large"><div class="nav-row"><h1 class="large-title">Favoriten</h1></div></header>
+      <main class="list" id="fav-list"></main>
+      <div class="empty" id="fav-empty" hidden>
+        <div class="empty-icon">♡</div>
+        <h2>Noch keine Favoriten</h2>
+        <p>Tippe auf das Herz bei einem Inserat. Favoriten bleiben nur auf diesem Gerät gespeichert.</p>
+      </div>
+    </section>
+
+    <!-- ====================== Mehr ====================== -->
+    <section class="view" id="view-more" data-tab="more">
+      <header class="nav nav-large"><div class="nav-row"><h1 class="large-title">Mehr</h1></div></header>
+      <main class="settings">
+        <h3 class="group-title">Darstellung</h3>
+        <div class="group">
+          <div class="row">
+            <span>Erscheinungsbild</span>
+            <div class="segmented" id="theme-seg" role="radiogroup">
+              <button data-v="auto">Auto</button><button data-v="light">Hell</button><button data-v="dark">Dunkel</button>
+            </div>
+          </div>
+        </div>
+        <h3 class="group-title">Datenquellen</h3>
+        <div class="group" id="sources"></div>
+        <p class="group-foot" id="data-stamp"></p>
+        <h3 class="group-title">So funktioniert der Score</h3>
+        <div class="group text-group">
+          <p>Der Preis-Leistungs-Score (0–100) ist regelbasiert und wird ohne KI-Dienst berechnet:</p>
+          <ul>
+            <li><b>Preis vs. Markt</b> – erwarteter Preis per Regression (Preis ~ km + Alter) aus vergleichbaren Inseraten (Marke, Modell, Baujahr ±1, Kraftstoff). Ist die Gruppe zu klein, wird eine breitere Gruppe genutzt und das angezeigt.</li>
+            <li><b>Kilometer pro Jahr</b> – je weniger, desto besser.</li>
+            <li><b>Unfallstatus</b> – unfallfrei Bonus, Unfallwagen deutlicher Abzug, unbekannt leicht negativ.</li>
+            <li><b>Fotos</b> – Anzahl, technische Bildqualität und ob Innenraumfotos vorhanden sind (lokales Open-Source-Modell bzw. Heuristik).</li>
+            <li><b>Warnungen</b> ziehen Punkte ab (z. B. Export, Motorschaden, Kurzzeitkennzeichen, Preis auffällig niedrig).</li>
+          </ul>
+          <p class="muted">Der Score ist eine Orientierungshilfe, kein Gutachten. Prüfe jedes Fahrzeug selbst.</p>
+        </div>
+        <h3 class="group-title">Über</h3>
+        <div class="group text-group">
+          <p>Kostenlos, ohne Konto, ohne Tracking. Alle Inserate verlinken auf die Originalanzeige; Bilder werden direkt vom Portal geladen.</p>
+          <p class="muted">Karte © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende · PLZ-Daten © <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0)</p>
+        </div>
+        <div class="group"><button class="row row-btn danger" id="btn-clear-favs">Alle Favoriten löschen</button></div>
+      </main>
+    </section>
+
+    <!-- ====================== Tab-Bar ====================== -->
+    <nav class="tabbar" id="tabbar">
+      <button data-tab="search" class="active"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Suche</span></button>
+      <button data-tab="map"><svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg><span>Karte</span></button>
+      <button data-tab="favs"><svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-9.3-9.2C1.4 7.4 3.6 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.4 0 5.6 3.4 4.3 6.8C19.5 15.4 12 20 12 20z"/></svg><span>Favoriten</span></button>
+      <button data-tab="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>Mehr</span></button>
+    </nav>
+  </div>
+
+  <!-- Detail-Ansicht (Push) -->
+  <section class="detail" id="detail" aria-hidden="true"></section>
+  <!-- Vollbild-Galerie mit Zoom -->
+  <div class="viewer" id="viewer" hidden></div>
+  <!-- Sheets -->
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

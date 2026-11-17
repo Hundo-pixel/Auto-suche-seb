@@ -1,0 +1,78 @@
+# Zentrale Konfiguration für Scraper und Score.
+# Alle Gewichte/Schwellen sind hier änderbar, ohne Code anzufassen.
+
+[scraper]
+user_agent = "AutoSucheBot/1.0 (+https://github.com/hundo-pixel/auto-suche-seb; privates, nicht-kommerzielles Projekt)"
+timeout_s = 30
+max_retries = 3            # Wiederholungen bei 5xx/Timeouts (exponentielles Backoff)
+backoff_base_s = 4
+min_delay_s = 3.0          # Mindestabstand zwischen zwei Seitenabrufen pro Host
+jitter_s = 2.0             # zufälliger Zusatz-Abstand
+image_delay_s = 0.4        # Abstand für Bild-CDN-Abrufe
+stale_after_hours = 72     # Inserate, die so lange nicht gesehen wurden, gelten als inaktiv
+max_runtime_min = 45       # harte Laufzeitgrenze pro Lauf (GitHub-Actions-freundlich)
+scrape_share = 0.6         # Anteil der Laufzeit fürs Scrapen; der Rest geht in die Bildanalyse
+max_image_analyses_per_run = 600
+images_per_listing_for_analysis = 6   # so viele Galeriebilder werden (klein) analysiert/gehasht
+
+[sources.autoscout24]
+enabled = true
+# robots.txt verbietet "/lst?..." -> es wird pro Marke gesucht ("/lst/<marke>?...").
+makes_per_run = 12         # rotierend über ALLE Marken, die das Portal liefert
+top_makes_every_run = ["volkswagen", "mercedes-benz", "bmw", "audi", "opel", "ford", "skoda"]
+pages_per_make = 2         # 20 Inserate pro Seite
+max_details_per_run = 150  # Detailseiten (Unfallstatus, Beschreibung, alle Bilder) nur für neue Inserate
+
+[sources.kleinanzeigen]
+enabled = true
+pages_all = 3              # neueste Inserate aller Marken (25 pro Seite)
+makes_per_run = 8
+pages_per_make = 1
+max_details_per_run = 120
+
+[sources.mobile_de]
+# robots.txt verbietet die Suchseiten, zusätzlich Bot-Schutz (HTTP 403).
+# Der Adapter prüft das bei jedem Lauf erneut und meldet es sauber im Log.
+enabled = true
+
+[score]
+# Gewichte der Teilwerte (werden normiert)
+w_price = 0.45
+w_mileage = 0.20
+w_accident = 0.20
+w_photos = 0.15
+
+[score.price]
+min_group_size = 6          # Mindestgröße der Vergleichsgruppe für die Regression
+year_window = 1             # Baujahr ±1
+deviation_best = -0.30      # -30 % unter Erwartung -> 100 Punkte
+deviation_worst = 0.30      # +30 % über Erwartung -> 0 Punkte
+suspicious_below = -0.35    # ab hier Warnung "Preis auffällig niedrig"
+
+[score.mileage]
+km_per_year_best = 5000     # -> 100 Punkte
+km_per_year_worst = 35000   # -> 0 Punkte
+
+[score.accident]
+free = 100
+unknown = 40
+accident = 0
+
+[score.photos]
+min_photos_ok = 8           # ab hier volle Punkte für Anzahl
+few_photos_warn = 3         # weniger -> Warnung
+
+[score.penalties]
+# Punktabzüge auf den Gesamtscore je Warnung
+plate = 10
+price_suspicious = 15
+keyword = 12
+few_photos = 8
+keyword_light = 4
+
+[dedupe]
+max_km_diff_abs = 1500
+max_km_diff_rel = 0.03
+max_price_diff_rel = 0.12
+phash_max_distance = 10
+max_location_km = 40

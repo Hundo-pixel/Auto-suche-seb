@@ -1,0 +1,10 @@
+# docker compose run --rm scraper        -> ein Lauf + Veröffentlichung
+# Zeitplan auf dem Pi z. B. per crontab:  17 */6 * * * cd /opt/autosuche && docker compose run --rm scraper
+services:
+  scraper:
+    build: .
+    environment:
+      - REPO_URL=${REPO_URL}          # z. B. git@github.com:<user>/<repo>.git
+    volumes:
+      - ./.state:/app/.state          # SQLite + Thumbnails bleiben zwischen Läufen erhalten
+      - ~/.ssh:/root/.ssh:ro          # Deploy-Key mit Schreibrecht (nur dieses Repo)
