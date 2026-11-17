@@ -131,8 +131,13 @@ docker compose run --rm scraper            # ein Lauf: scrapen + Branch "data" p
 ```
 
 In GitHub dann unter **Settings → Secrets and variables → Actions → Variables** `SCRAPE_IN_ACTIONS=false`
-setzen und unter **Settings → Environments → github-pages → Deployment branches** zusätzlich den Branch `data`
-erlauben (sonst darf der durch den Push ausgelöste Workflow nicht deployen). Der Push in `data` löst `deploy-pages.yml` aus, die Seite wird ohne weitere Kosten aktualisiert.
+setzen. `deploy-pages.yml` baut die Seite dann alle 2 Stunden aus dem Branch `data` neu (ein Push in `data` selbst
+kann keinen Workflow auslösen, weil `data` keine Workflow-Dateien enthält). Sofort aktualisieren:
+**Actions → „deploy-pages" → „Run workflow"**.
+
+> **Deployment schlägt mit „Branch … is not allowed to deploy to github-pages due to environment protection rules" fehl?**
+> Unter **Settings → Environments → github-pages → Deployment branches and tags** den Branch eintragen, von dem
+> die Workflows laufen (normalerweise der Standard-Branch, z. B. `main`).
 Ohne Docker geht es genauso: `pip install -r scraper/requirements.txt && ./scraper/tools/local_publish.sh`.
 
 **Was ist besser?** Mit GitHub Actions starten. Meldet das Log `QUELLE BLOCKIERT` (HTTP 403/429/Captcha) dauerhaft

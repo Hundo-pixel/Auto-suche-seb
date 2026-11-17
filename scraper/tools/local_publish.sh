@@ -3,7 +3,7 @@
 #
 # Voraussetzung: ein Git-Remote mit Schreibrecht (z. B. Deploy-Key oder Fine-grained PAT nur für dieses Repo).
 #   REPO_URL=git@github.com:<user>/<repo>.git ./scraper/tools/local_publish.sh
-# Danach baut der Workflow "deploy-pages" die Seite automatisch neu.
+# Danach baut der Workflow "deploy-pages" die Seite beim nächsten Zeitplan-Lauf (alle 2 h) neu – sofort per "Run workflow".
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 REPO_URL="${REPO_URL:-$(git remote get-url origin)}"

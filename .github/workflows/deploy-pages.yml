@@ -1,10 +1,16 @@
-# Baut die Seite neu, wenn sich die App (web/) ändert oder ein lokaler Scraper neue Daten in "data" pusht.
+# Baut die Seite neu, wenn sich die App (web/) ändert – und, wenn ein lokaler Scraper (Pi/Docker) die Daten liefert,
+# zusätzlich regelmäßig per Zeitplan.
+#
+# Hinweis: Ein Push in den Branch "data" kann diesen Workflow NICHT auslösen – GitHub startet Workflows nur aus der
+# .github/workflows-Version des gepushten Branches, und "data" enthält nur Daten. Deshalb der Zeitplan unten.
 name: deploy-pages
 
 on:
   push:
-    branches: [main, master, data, "claude/used-car-search-app-zi9jjr"]
+    branches: [main, master, "claude/used-car-search-app-zi9jjr"]
     paths-ignore: ["scraper/**", "**.md"]
+  schedule:
+    - cron: "47 */2 * * *"     # nur aktiv, wenn SCRAPE_IN_ACTIONS=false (lokaler Scraper pusht nach "data")
   workflow_dispatch:
 
 permissions:
@@ -18,11 +24,10 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'schedule' || vars.SCRAPE_IN_ACTIONS == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.repository.default_branch }}
       - name: Daten aus Branch "data"
         run: |
           mkdir -p _site && cp -r web/. _site/
