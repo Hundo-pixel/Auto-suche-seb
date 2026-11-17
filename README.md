@@ -117,7 +117,8 @@ python -m autosuche.run -v                        # ausführliches Log
 
 Der Workflow holt Datenbank + Thumbnails aus dem Branch `data`, scrapt (max. 45 Minuten, davon ~60 % Scraping
 und ~40 % Bildanalyse), schreibt den Zustand zurück (der Branch `data` wird jedes Mal ohne Historie neu
-geschrieben, damit das Repo klein bleibt) und deployt die Seite. Änderungen an `web/` lösen `deploy-pages.yml` aus.
+geschrieben, damit das Repo klein bleibt) und startet dann `deploy-pages.yml` auf `main`, das die Seite veröffentlicht.
+Änderungen an `web/` auf `main` lösen `deploy-pages.yml` ebenfalls aus.
 
 ### Variante B: Raspberry Pi / eigener Rechner per Docker (wenn Portale GitHub-IPs blocken)
 

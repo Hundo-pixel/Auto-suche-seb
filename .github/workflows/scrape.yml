@@ -1,7 +1,8 @@
 # Geplanter Scraper-Lauf auf GitHub Actions (kostenlos für öffentliche Repos).
-# Ablauf: Zustand (SQLite + Thumbnails) aus dem Branch "data" holen -> scrapen -> zurückschreiben -> Pages deployen.
+# Ablauf: Zustand (SQLite + Thumbnails) aus dem Branch "data" holen -> scrapen -> zurückschreiben -> "deploy-pages"
+# auf dem Branch main starten (nur main darf nach GitHub Pages veröffentlichen, egal welcher Branch Standard ist).
 # Wenn Portale GitHub-IPs blocken, siehe README ("Lokal per Docker/Raspberry Pi"); dann die Variable
-# SCRAPE_IN_ACTIONS=false setzen – der Workflow deployt dann nur noch.
+# SCRAPE_IN_ACTIONS=false setzen – dann scrapt nur noch der Pi, und deploy-pages baut die Seite per Zeitplan.
 name: scrape
 
 on:
@@ -11,8 +12,7 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
+  actions: write     # um deploy-pages zu starten
 
 concurrency:
   group: scrape
@@ -69,21 +69,7 @@ jobs:
             commit -q -m "Daten $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -q --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" data
 
-      - name: Seite zusammenbauen
-        run: |
-          mkdir -p _site && cp -r web/. _site/
-          cp -r .state/site/. _site/data/
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-  deploy:
-    needs: scrape
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Seite veröffentlichen (deploy-pages auf main starten)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --repo "${{ github.repository }}" --ref "${{ vars.PAGES_BRANCH || 'main' }}"
