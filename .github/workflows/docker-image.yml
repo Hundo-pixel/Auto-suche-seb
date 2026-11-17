@@ -2,9 +2,9 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "claude/used-car-search-app-zi9jjr" ]
+    branches: [ "main", "claude/used-car-search-app-zi9jjr" ]
   pull_request:
-    branches: [ "claude/used-car-search-app-zi9jjr" ]
+    branches: [ "main", "claude/used-car-search-app-zi9jjr" ]
 
 jobs:
 

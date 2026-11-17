@@ -3,7 +3,7 @@ name: deploy-pages
 
 on:
   push:
-    branches: [main, master, data]
+    branches: [main, master, data, "claude/used-car-search-app-zi9jjr"]
     paths-ignore: ["scraper/**", "**.md"]
   workflow_dispatch:
 
