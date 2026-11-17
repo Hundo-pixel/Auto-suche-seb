@@ -48,7 +48,7 @@ def test_cheap_car_scores_higher_than_expensive():
 def test_fallback_group_is_marked():
     cfg = load_config()
     recs = market()  # Golf 2016–2021
-    old = rec("old", 4000, 2008, 200000)   # Baujahr außerhalb ±1 -> breitere Gruppe
+    old = rec("old", 9000, 2014, 160000)   # Baujahr außerhalb ±1, aber innerhalb ±4 -> breitere Gruppe
     score_records(recs + [old], cfg, TODAY)
     assert old["score_breakdown"]["price_level"] == "model_fuel"
     assert old["score_breakdown"]["price_fallback"] is True
@@ -100,3 +100,11 @@ def test_scores_are_bounded():
                            warnings=[{"type": t, "kind": "keyword"} for t in "abcdef"])]
     score_records(recs, cfg, TODAY)
     assert all(0 <= r["score"] <= 100 for r in recs)
+
+
+def test_classic_cars_are_neutral():
+    cfg = load_config()
+    classic = rec("c", 30000, 1965, 80000)
+    score_records(market() + [classic], cfg, TODAY)
+    assert classic["score_breakdown"]["components"][0]["points"] == 50.0
+    assert not any(w["type"] == "Preis auffällig niedrig" for w in classic["warnings"])

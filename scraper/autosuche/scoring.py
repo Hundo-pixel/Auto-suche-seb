@@ -19,9 +19,9 @@ import numpy as np
 
 GROUP_LEVELS = [
     ("exact", "Marke, Modell, Baujahr ±{yw}, Kraftstoff"),
-    ("model_fuel", "Marke, Modell, Kraftstoff (alle Baujahre)"),
-    ("model", "Marke, Modell (alle Kraftstoffe)"),
-    ("make_fuel", "Marke, Kraftstoff (alle Modelle)"),
+    ("model_fuel", "Marke, Modell, Kraftstoff, Baujahr ±4"),
+    ("model", "Marke, Modell, Baujahr ±4 (alle Kraftstoffe)"),
+    ("make_fuel", "Marke, Kraftstoff, Baujahr ±4 (alle Modelle)"),
 ]
 
 
@@ -91,8 +91,9 @@ class Scorer:
         for r in records:
             if not r.get("price") or r.get("age") is None or r.get("mileage") is None:
                 continue
-            self.idx[("model_fuel", r["make_key"], r["model_key"], r.get("fuel"))].append(r)
-            self.idx[("model", r["make_key"], r["model_key"])].append(r)
+            if r["model_key"]:
+                self.idx[("model_fuel", r["make_key"], r["model_key"], r.get("fuel"))].append(r)
+                self.idx[("model", r["make_key"], r["model_key"])].append(r)
             self.idx[("make_fuel", r["make_key"], r.get("fuel"))].append(r)
 
     def _group(self, r: dict) -> tuple[str, list[dict]]:
@@ -105,13 +106,18 @@ class Scorer:
                  and abs(int(x["first_registration"][:4]) - year) <= yw and x["uid"] != r["uid"]]
         if len(exact) >= n_min:
             return "exact", exact
-        others = [x for x in mf if x["uid"] != r["uid"]]
+        wide = int(pc.get("wide_year_window", 4))
+        others = [x for x in mf if x["uid"] != r["uid"] and year and x.get("first_registration")
+                  and abs(int(x["first_registration"][:4]) - year) <= wide]
         if len(others) >= n_min:
             return "model_fuel", others
-        m = [x for x in self.idx.get(("model", r["make_key"], r["model_key"]), []) if x["uid"] != r["uid"]]
+        def near(x):
+            return x["uid"] != r["uid"] and year and x.get("first_registration") \
+                and abs(int(x["first_registration"][:4]) - year) <= wide
+        m = [x for x in self.idx.get(("model", r["make_key"], r["model_key"]), []) if near(x)]
         if len(m) >= n_min:
             return "model", m
-        mk = [x for x in self.idx.get(("make_fuel", r["make_key"], r.get("fuel")), []) if x["uid"] != r["uid"]]
+        mk = [x for x in self.idx.get(("make_fuel", r["make_key"], r.get("fuel")), []) if near(x)]
         if len(mk) >= n_min * 2:
             return "make_fuel", mk
         return "none", []
@@ -121,6 +127,9 @@ class Scorer:
         pc = self.c["price"]
         if not r.get("price") or r.get("age") is None or r.get("mileage") is None:
             return {"points": 50.0, "level": "none", "detail": "Preis, km oder Baujahr fehlen – neutral bewertet"}
+        if r["age"] >= float(pc.get("classic_age", 30)):
+            return {"points": 50.0, "level": "none", "group_size": 0,
+                    "detail": "Oldtimer – Marktpreis lässt sich regelbasiert nicht sinnvoll schätzen, neutral bewertet"}
         level, grp = self._group(r)
         if level == "none":
             return {"points": 50.0, "level": "none", "group_size": 0,
@@ -129,11 +138,17 @@ class Scorer:
         if not exp:
             return {"points": 50.0, "level": "none", "group_size": len(grp), "detail": "Regression nicht möglich"}
         dev = (r["price"] - exp) / exp
+        if level != "exact" and abs(dev) > float(pc.get("max_fallback_deviation", 0.5)):
+            return {"points": 50.0, "level": "none", "group_size": len(grp),
+                    "detail": f"Vergleichsgruppe zu uneinheitlich ({dev*100:+.0f} %) – neutral bewertet"}
         pts = _lin(dev, float(pc["deviation_best"]), float(pc["deviation_worst"]))
+        # Je breiter die Vergleichsgruppe, desto unsicherer die Schätzung -> Richtung neutral (50) dämpfen
+        conf = float(pc.get("confidence", {}).get(level, 1.0))
+        pts = 50 + (pts - 50) * conf
         label = dict(GROUP_LEVELS)[level].format(yw=pc["year_window"])
         return {"points": round(pts, 1), "level": level, "group_size": len(grp), "expected": round(exp),
                 "deviation": round(dev, 4), "fallback": level != "exact",
-                "detail": f"{dev*100:+.0f} % vs. erwartet {round(exp):,} € (Gruppe: {label}, n={len(grp)})".replace(",", ".")}
+                "detail": f"{dev*100:+.0f} % vs. erwartet {round(exp):,} € ".replace(",", ".") + f"(Gruppe: {label}, n={len(grp)})"}
 
     def mileage_component(self, r: dict) -> dict:
         mc = self.c["mileage"]
@@ -192,7 +207,8 @@ class Scorer:
             base = sum(comps[k]["points"] * w[k] for k in comps) / wsum
             warnings = list(r.get("warnings") or [])
             dev = comps["price"].get("deviation")
-            if dev is not None and dev <= float(self.c["price"]["suspicious_below"]):
+            reliable = comps["price"].get("level") in ("exact", "model_fuel")
+            if dev is not None and reliable and dev <= float(self.c["price"]["suspicious_below"]):
                 warnings.append({"type": "Preis auffällig niedrig", "kind": "price_suspicious",
                                  "evidence": f"{dev*100:.0f} % unter dem erwarteten Marktpreis – Vorsicht vor Betrug/Mängeln"})
             if int(r.get("image_count") or 0) < int(self.c["photos"]["few_photos_warn"]):

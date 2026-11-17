@@ -123,6 +123,9 @@ def model_key(make: str, model: str, model_group: str = "") -> str:
     m = unicodedata.normalize("NFKD", m).encode("ascii", "ignore").decode()
     m = re.sub(r"\b(reihe|serie|series|klasse|class|modell)\b", "", m)
     m = re.sub(r"[^a-z0-9]+", "", m)
+    # Sammelbegriffe sind keine vergleichbaren Modelle
+    if m in ("sonstige", "andere", "weitere", "others", "other", "diverse"):
+        return ""
     return m
 
 

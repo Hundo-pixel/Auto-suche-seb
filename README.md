@@ -10,6 +10,11 @@ Keine Anmeldung, kein Konto, keine bezahlten Dienste, keine KI-API, keine API-Ke
   <img src="docs/screenshots/karte.jpg" width="230" alt="Karte mit Umkreis">
 </p>
 
+**Getestet mit echten Daten (17.11.2026):** 3 Läufe aus einer Cloud-Umgebung → 609 AutoScout24- und
+293 Kleinanzeigen-Inserate gesammelt, 592 vollständige Inserate exportiert, 18 Duplikate portalübergreifend
+zusammengeführt, 612 Bildanalysen per CLIP. Kleinanzeigen sperrte nach ~16 Detailabrufen per HTTP 403
+(korrekt gemeldet, Quelle pausiert), mobile.de ist per robots.txt gesperrt – die App lief mit den übrigen Daten weiter.
+
 ---
 
 ## Inhalt
@@ -230,7 +235,7 @@ Stand der Prüfung: **17.11.2026**. Portale ändern robots.txt und HTML regelmä
 | Portal | Status | Details |
 |---|---|---|
 | **AutoScout24** | ✅ aktiv (nur Ergebnislisten) | robots.txt erlaubt `/lst/<marke>?…`, **verbietet aber `/lst?…` und die Detailseiten `/angebote/`** für allgemeine Bots. Daher: Suche pro Marke (alle ~300 Marken rotierend), Daten nur aus den Listen. Vorhanden: Preis, km, EZ, PS/kW, Kraftstoff, Getriebe, Verkäufertyp, PLZ/Ort, **alle Galeriebilder**, Farbe (aus URL). **Fehlt: Beschreibung und Unfallhistorie** → Unfallstatus meist „unbekannt" (außer „unfallfrei" steht im Titel/Variantentext); Reifen-/Kennzeichen-Erkennung nur aus dem Titel. Der Filter „nur Unfallfahrzeuge" des Portals liefert keine Treffer und wird nicht genutzt. |
-| **Kleinanzeigen** | ✅ aktiv | Liste + Detailseiten erlaubt. Gesuche („Suche Auto …") werden aussortiert (der Filter `anzeige:angebote` ist per robots.txt verboten). Detailseiten werden pro Lauf begrenzt (Standard 120), Inserate ohne geladene Detailseite haben ggf. noch keine Marke und erscheinen erst nach dem Detailabruf. **Kleinanzeigen blockt Rechenzentrums-IPs häufig** → bei `QUELLE BLOCKIERT` Variante B (Raspberry Pi). |
+| **Kleinanzeigen** | ⚠️ aktiv, sperrt Cloud-IPs | Liste + Detailseiten erlaubt. Gesuche („Suche Auto …") werden aussortiert (der Filter `anzeige:angebote` ist per robots.txt verboten). Detailseiten werden pro Lauf begrenzt (Standard 120), Inserate ohne geladene Detailseite haben ggf. noch keine Marke und erscheinen erst nach dem Detailabruf. **Kleinanzeigen blockt Rechenzentrums-IPs häufig** → bei `QUELLE BLOCKIERT` Variante B (Raspberry Pi). |
 | **mobile.de** | ⛔ gesperrt | robots.txt verbietet `/fahrzeuge/search.html` und `*isSearchRequest=true`, zusätzlich antwortet mobile.de Bots mit HTTP 403 (Bot-Schutz). Der Adapter prüft das bei jedem Lauf und meldet es; es wird **nicht** versucht, die Sperre zu umgehen. |
 
 Weitere Grenzen:

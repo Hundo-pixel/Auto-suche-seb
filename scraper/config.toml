@@ -46,9 +46,19 @@ w_photos = 0.15
 [score.price]
 min_group_size = 6          # Mindestgröße der Vergleichsgruppe für die Regression
 year_window = 1             # Baujahr ±1
+wide_year_window = 4        # Rückfallgruppe: gleiches Modell, Baujahr ±4
+max_fallback_deviation = 0.5 # in Rückfallgruppen: größere Abweichung = Gruppe zu uneinheitlich -> neutral
+classic_age = 30            # ab diesem Alter (Oldtimer) wird der Preis neutral bewertet
 deviation_best = -0.30      # -30 % unter Erwartung -> 100 Punkte
 deviation_worst = 0.30      # +30 % über Erwartung -> 0 Punkte
-suspicious_below = -0.35    # ab hier Warnung "Preis auffällig niedrig"
+suspicious_below = -0.35    # ab hier Warnung "Preis auffällig niedrig" (nur bei modellgenauen Gruppen)
+
+[score.price.confidence]
+# Dämpfung des Preis-Teilwerts Richtung 50 je nach Vergleichsgruppe (1 = volle Wirkung)
+exact = 1.0
+model_fuel = 0.85
+model = 0.7
+make_fuel = 0.4
 
 [score.mileage]
 km_per_year_best = 5000     # -> 100 Punkte
