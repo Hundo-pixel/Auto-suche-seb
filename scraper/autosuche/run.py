@@ -27,6 +27,14 @@ log = logging.getLogger("autosuche")
 
 def run_source(name: str, cfg: dict, db: DB, state: dict, deadline: float) -> None:
     adapter_cls = ADAPTERS[name]
+    # Nach einer Sperre pausiert die Quelle (höflich, kein Dauerklopfen)
+    until = state.get(f"{name}.blocked_until")
+    if until and datetime.now(timezone.utc).isoformat() < until:
+        msg = f"pausiert nach Sperre bis {until[:16].replace('T', ' ')} UTC"
+        log.warning("[%s] %s", name, msg)
+        db.log_run(name, "blocked", msg)
+        db.commit()
+        return
     client = PoliteClient(cfg, deadline=deadline)
     adapter = adapter_cls(client, cfg, state)
     found = new = details = 0
@@ -76,7 +84,10 @@ def run_source(name: str, cfg: dict, db: DB, state: dict, deadline: float) -> No
         log.error("QUELLE ÜBERSPRUNGEN [%s]: %s", name, message)
     except BlockedError as e:
         status, message = "blocked", f"Quelle blockiert uns: {e}"
-        log.error("QUELLE BLOCKIERT [%s]: %s – andere Quellen laufen weiter", name, e)
+        pause_h = float(cfg["scraper"].get("pause_after_block_hours", 12))
+        state[f"{name}.blocked_until"] = (datetime.now(timezone.utc) + timedelta(hours=pause_h)).replace(
+            microsecond=0).isoformat()
+        log.error("QUELLE BLOCKIERT [%s]: %s – Pause %.0f h, andere Quellen laufen weiter", name, e, pause_h)
     except TimeBudgetExceeded:
         status = "partial"
         message = f"Zeitbudget erschöpft: {found} gefunden, {new} neu, {details} Detailseiten"

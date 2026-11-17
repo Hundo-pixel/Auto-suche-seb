@@ -11,7 +11,7 @@ Gruppen werden per Union-Find gebildet; das vollständigste Inserat wird zum Hau
 """
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 from .geo import haversine_km
 from .images import min_phash_distance
@@ -69,6 +69,13 @@ def completeness(r: dict) -> int:
 
 def find_duplicates(records: list[dict], cfg: dict) -> dict[str, list[dict]]:
     """Gibt {hauptinserat_uid: [ {uid, reason}, ... ]} zurück und setzt r['dup_of'] bei Nebeninseraten."""
+    # Bild-Hashes, die bei vielen Inseraten auftauchen (Händler-Banner, "Bild folgt"-Platzhalter),
+    # sagen nichts über das Fahrzeug aus -> für den Vergleich ignorieren
+    freq = Counter(h for r in records for h in set(r.get("hashes") or []))
+    common = {h for h, n in freq.items() if n >= int(cfg["dedupe"].get("common_hash_min", 4))}
+    if common:
+        for r in records:
+            r["hashes"] = [h for h in (r.get("hashes") or []) if h not in common]
     blocks = defaultdict(list)
     for r in records:
         if r.get("year"):
@@ -89,7 +96,6 @@ def find_duplicates(records: list[dict], cfg: dict) -> dict[str, list[dict]]:
                     uf.union(a["uid"], b["uid"])
                     reasons[(a["uid"], b["uid"])] = why
     groups = defaultdict(list)
-    by_uid = {r["uid"]: r for r in records}
     for r in records:
         if r["uid"] in uf.p:
             groups[uf.find(r["uid"])].append(r)
@@ -105,5 +111,4 @@ def find_duplicates(records: list[dict], cfg: dict) -> dict[str, list[dict]]:
             m["dup_of"] = main["uid"]
             dups.append({"uid": m["uid"], "reason": why})
         out[main["uid"]] = dups
-    _ = by_uid
     return out

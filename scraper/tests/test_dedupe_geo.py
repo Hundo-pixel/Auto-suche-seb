@@ -46,3 +46,10 @@ def test_image_helpers():
     imgs = [str(i) for i in range(30)]
     sel = pick_spread(imgs, 6)
     assert len(sel) == 6 and sel[0] == "0" and sel[-1] == "29"
+
+
+def test_placeholder_hash_is_ignored():
+    cfg = load_config()
+    ph = "abcdabcdabcdabcd"   # gleicher Platzhalter bei vielen Inseraten
+    cars = [car(f"as:{i}", "autoscout24", price=15000 + i * 10, km=80000 + i * 50, hashes=[ph]) for i in range(5)]
+    assert find_duplicates(cars, cfg) == {}

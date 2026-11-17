@@ -175,7 +175,7 @@ function render(x, d) {
   }
 }
 
-export function badges(x) {
+export function badges(x, opts = {}) {
   const b = [];
   if (x.acc === "free") b.push(`<span class="badge green">Unfallfrei</span>`);
   else if (x.acc === "accident") b.push(`<span class="badge red">Unfallwagen</span>`);
@@ -184,8 +184,9 @@ export function badges(x) {
   if (x.tyres?.sets >= 2) b.push(`<span class="badge purple">${x.tyres.labels?.includes("Sommer") && x.tyres.labels?.includes("Winter") ? "Sommer + Winter" : x.tyres.sets + " Reifensätze"}</span>`);
   else if (x.tyres?.labels?.includes("Ganzjahr")) b.push(`<span class="badge purple">Ganzjahresreifen</span>`);
   else if (x.tyres?.sets === 1) b.push(`<span class="badge purple">1 Reifensatz (${esc(x.tyres.labels.filter((l) => l !== "Kompletträder").join("/") || "?")})</span>`);
-  if (x.interior === true) b.push(`<span class="badge">Innenraumfotos</span>`);
-  if (x.sb?.price_fallback && x.sb?.price_level !== "none") b.push(`<span class="badge orange">Breitere Vergleichsgruppe</span>`);
+  if (!opts.list && x.interior === true) b.push(`<span class="badge">Innenraumfotos</span>`);
+  if (!opts.list && x.sb?.price_fallback && x.sb?.price_level !== "none") b.push(`<span class="badge orange">Breitere Vergleichsgruppe</span>`);
+  if (x.sb?.deviation != null && x.sb.deviation <= -0.12 && x.sb.deviation > -0.35 && !x.sb.price_fallback) b.push(`<span class="badge green">${Math.round(-x.sb.deviation * 100)} % unter Markt</span>`);
   for (const w of x.warn || []) b.push(`<span class="badge red" title="${esc(w.e)}">⚠︎ ${esc(w.t)}</span>`);
   if (x.alts?.length) b.push(`<span class="badge">${x.alts.length + 1} Portale</span>`);
   return b;

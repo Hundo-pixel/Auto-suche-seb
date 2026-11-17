@@ -5,9 +5,9 @@ zusammenführt und jedes Fahrzeug mit einem regelbasierten **Preis-Leistungs-Sco
 Keine Anmeldung, kein Konto, keine bezahlten Dienste, keine KI-API, keine API-Keys.
 
 <p align="center">
-  <img src="docs/screenshots/liste.png" width="230" alt="Liste">
-  <img src="docs/screenshots/detail.png" width="230" alt="Detail mit Score">
-  <img src="docs/screenshots/karte.png" width="230" alt="Karte mit Umkreis">
+  <img src="docs/screenshots/liste.jpg" width="230" alt="Liste">
+  <img src="docs/screenshots/detail.jpg" width="230" alt="Detail mit Score">
+  <img src="docs/screenshots/karte.jpg" width="230" alt="Karte mit Umkreis">
 </p>
 
 ---
@@ -126,7 +126,8 @@ docker compose run --rm scraper            # ein Lauf: scrapen + Branch "data" p
 ```
 
 In GitHub dann unter **Settings → Secrets and variables → Actions → Variables** `SCRAPE_IN_ACTIONS=false`
-setzen. Der Push in `data` löst `deploy-pages.yml` aus, die Seite wird ohne weitere Kosten aktualisiert.
+setzen und unter **Settings → Environments → github-pages → Deployment branches** zusätzlich den Branch `data`
+erlauben (sonst darf der durch den Push ausgelöste Workflow nicht deployen). Der Push in `data` löst `deploy-pages.yml` aus, die Seite wird ohne weitere Kosten aktualisiert.
 Ohne Docker geht es genauso: `pip install -r scraper/requirements.txt && ./scraper/tools/local_publish.sh`.
 
 **Was ist besser?** Mit GitHub Actions starten. Meldet das Log `QUELLE BLOCKIERT` (HTTP 403/429/Captcha) dauerhaft
@@ -169,10 +170,13 @@ Baureihe „3er" über die Taxonomie von AutoScout24).
 
 ### Wie belastbar ist die Bildanalyse? (ehrlich)
 
-* **Innenraum vorhanden ja/nein** (CLIP-Zero-Shot gegen Texte wie „Innenraum mit Sitzen und Armaturenbrett"):
-  in Stichproben zuverlässig, Fehler v. a. bei Detailfotos (Schaltknauf, Tacho) oder Fotos durch die offene Tür.
-  Analysiert werden pro Inserat 6 über die Galerie verteilte Bilder; wird keins erkannt, obwohl die Galerie viel
-  größer ist, gilt der Status als „unbekannt" statt „nein".
+* **Innenraum vorhanden ja/nein** (CLIP-Zero-Shot gegen Texte wie „Innenraum mit Sitzen und Armaturenbrett",
+  mit Gegenkategorien Kofferraum, Motorraum, Rad, Werbeprospekt, Logo). Zwei von Hand geprüfte Stichproben
+  (108 Bilder aus 18 AutoScout24-Inseraten): **alle 25 Innenraumfotos erkannt, 4 Fehlalarme** (Kofferraum,
+  Prospekte; nach Ergänzung der Gegenkategorien noch 1 von 13) → Präzision pro Bild ~86–92 %,
+  **auf Inseratsebene 18/18 richtig**. Das ist eine kleine Stichprobe, keine Validierung. Reine Detailfotos
+  (Tacho, Klimabedienteil) zählen teils nicht als Innenraum. Analysiert werden pro Inserat 6 über die Galerie
+  verteilte Bilder; wird keins erkannt, obwohl die Galerie viel größer ist, gilt der Status als „unbekannt".
 * **„Wirkt gepflegt"**: nur ein grober Hinweis (CLIP vergleicht mit „sauber/gepflegt" vs. „schmutzig/abgenutzt").
   Licht, Winkel und Bildbearbeitung beeinflussen das stark – deshalb fließt es nur mit wenigen Prozent ein.
 * **Bildqualität** (Schärfe, Belichtung, Kontrast auf kleinen Bildvarianten): robust gegen extreme Ausreißer

@@ -51,8 +51,8 @@ def build_records(db: DB, cfg: dict) -> list[dict]:
     groups = db.model_group_map()
     for row in db.active(since):
         d = json.loads(row["data"])
-        if not d.get("make") or not d.get("price"):
-            continue  # ohne Marke/Preis nicht sinnvoll vergleichbar (Detailseite noch nicht geladen)
+        if not d.get("make") or not d.get("price") or row["detail_at"] is None:
+            continue  # unvollständig (Detailseite noch nicht geladen) -> erst nach dem Detailabruf zeigen
         a = json.loads(row["analysis"]) if row["analysis"] else {}
         text = "\n".join([d.get("title") or "", d.get("variant") or "", d.get("description") or ""])
         warnings = [{**w, "kind": "plate"} for w in plate_hints(text)]

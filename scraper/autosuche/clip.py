@@ -4,10 +4,14 @@
 * Kein Internet-Dienst, keine API-Keys. Download einmalig: python tools/fetch_clip.py
 * Ist das Modell nicht vorhanden, fällt die Analyse automatisch auf Heuristiken zurück.
 
-Ehrliche Einschätzung: Die Erkennung "Innenraum ja/nein" ist mit CLIP gut (>90 % in
-Stichproben), "wirkt gepflegt" ist dagegen nur ein grober Hinweis – CLIP vergleicht das Bild
-mit Text wie "sauberer, gepflegter Innenraum" vs. "schmutziger, abgenutzter Innenraum".
-Licht, Bildwinkel und Bildqualität beeinflussen das stark.
+Ehrliche Einschätzung – zwei von Hand geprüfte Stichproben (17.11.2026, AutoScout24, Schwelle 0,5):
+  1) 48 Bilder / 8 Inserate (ursprüngliche Prompts): 13/13 Innenraumfotos erkannt, 3 Fehlalarme
+     (2× Kofferraum, 1× Händler-Prospekt) -> Präzision ~81 % pro Bild, Inseratsebene 8/8.
+  2) 60 Bilder / 10 Inserate (mit Gegenkategorien Kofferraum/Werbung/Logo): 12/12 erkannt, 1 Fehlalarm
+     (Studiofoto mit Werbebanner) -> Präzision ~92 % pro Bild, Inseratsebene 10/10.
+  Detailfotos (nur Tacho/Klimabedienteil) zählen teils als "other". Das ist eine kleine Stichprobe,
+  keine Validierung. "Wirkt gepflegt" ist nur ein grober Hinweis (Vergleich mit "sauber/gepflegt" vs.
+  "schmutzig/abgenutzt"); Licht, Winkel und Bildqualität beeinflussen ihn stark.
 """
 from __future__ import annotations
 
@@ -31,7 +35,9 @@ CATEGORIES = {
     "exterior": ["a photo of the exterior of a car", "a photo of a car parked outside",
                  "a side view photo of a car", "a photo of the front of a car"],
     "other": ["a photo of a car engine bay", "a photo of a car wheel and tire", "a photo of a document",
-              "a photo of the open trunk of a car", "a photo of a car key", "a photo of a car instrument cluster"],
+              "a photo of the open trunk of a car", "a photo of the empty cargo area of a car",
+              "a photo of a car boot with the tailgate open", "a photo of a car key",
+              "an advertisement flyer with text", "a company logo on a sign", "a photo of a car instrument cluster"],
 }
 CLEAN = ["a photo of a clean, tidy and well-kept car interior"]
 DIRTY = ["a photo of a dirty, worn, messy car interior with stains"]

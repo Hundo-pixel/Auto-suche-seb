@@ -56,6 +56,7 @@ class PoliteClient:
         self.backoff = float(sc["backoff_base_s"])
         self.deadline = deadline
         self._robots: dict[str, Protego | None] = {}
+        self._blocked_hosts: dict[str, str] = {}   # Host -> Grund; nach einer Sperre keine weiteren Anfragen
         self._last: dict[str, float] = {}
         self.stats = {"requests": 0, "errors": 0, "disallowed": 0, "blocked": 0}
         self.client = httpx.Client(
@@ -120,6 +121,9 @@ class PoliteClient:
     # ---------------------------------------------------------------- fetch
     def get(self, url: str, kind: str = "page") -> httpx.Response:
         self._check_deadline()
+        host = urlsplit(url).netloc
+        if host in self._blocked_hosts:
+            raise BlockedError(f"{host} hat uns in diesem Lauf bereits gesperrt ({self._blocked_hosts[host]})")
         if not self.allowed(url):
             self.stats["disallowed"] += 1
             raise DisallowedError(f"robots.txt verbietet {url}")
@@ -139,12 +143,14 @@ class PoliteClient:
 
             if r.status_code in (401, 403):
                 self.stats["blocked"] += 1
+                self._blocked_hosts[host] = f"HTTP {r.status_code}"
                 raise BlockedError(f"HTTP {r.status_code} für {url}")
             if r.status_code == 429 or r.status_code >= 500:
                 self.stats["errors"] += 1
                 if attempt > self.max_retries:
                     if r.status_code == 429:
                         self.stats["blocked"] += 1
+                        self._blocked_hosts[host] = "HTTP 429"
                         raise BlockedError(f"Dauerhaft HTTP 429 (Rate-Limit) für {url}")
                     raise FetchError(f"HTTP {r.status_code} für {url}")
                 self._sleep_backoff(attempt, r.headers.get("Retry-After"))
@@ -155,6 +161,7 @@ class PoliteClient:
                 # Kleine Seiten mit Captcha-Hinweisen sind fast immer Bot-Schutz-Seiten
                 if BLOCK_MARKERS.search(r.text[:20000]):
                     self.stats["blocked"] += 1
+                    self._blocked_hosts[host] = "Captcha/Bot-Schutz"
                     raise BlockedError(f"Bot-Schutz/Captcha-Seite erkannt bei {url}")
             r.raise_for_status()
             return r

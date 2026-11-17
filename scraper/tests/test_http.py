@@ -71,3 +71,18 @@ def test_unreadable_robots_is_treated_as_disallow():
 
     with pytest.raises(DisallowedError):
         make_client(h).get("https://example.org/x")
+
+
+def test_blocked_host_is_not_contacted_again():
+    calls = []
+
+    def h(req):
+        calls.append(req.url.path)
+        return httpx.Response(404) if req.url.path == "/robots.txt" else httpx.Response(403)
+
+    c = make_client(h)
+    with pytest.raises(BlockedError):
+        c.get("https://example.org/a")
+    with pytest.raises(BlockedError):
+        c.get("https://example.org/b")
+    assert "/b" not in calls

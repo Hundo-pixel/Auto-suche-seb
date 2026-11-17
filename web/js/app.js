@@ -23,7 +23,7 @@ function cardHtml(x, opts = {}) {
     x.gear ? `<span>${x.gear === "Schaltgetriebe" ? "Schalter" : esc(x.gear)}</span>` : "",
     x._dist != null ? `<span>📍 ${fmtDist(x._dist)}</span>` : x.city ? `<span>📍 ${esc(x.city)}</span>` : "",
   ].join("");
-  const b = badges(x);
+  const b = badges(x, { list: true });
   return `<article class="card" data-id="${esc(x.id)}">
     <div class="card-media">
       ${img ? `<img src="${esc(img)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${x.thumb && x.img ? ` onerror="this.onerror=null;this.src='${esc(x.img)}'"` : ""}>` : `<div class="noimg">🚗</div>`}
